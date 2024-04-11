@@ -1,6 +1,7 @@
 import 'dart:math';
-import 'package:adivina_el_numero/views/widgets/custom_listview.dart';
+import 'package:adivina_el_numero/views/helpers.dart';
 import 'package:flutter/material.dart';
+import 'package:adivina_el_numero/views/widgets/custom_listview.dart';
 
 class AdivinaElNumeroView extends StatefulWidget {
   const AdivinaElNumeroView({Key? key}) : super(key: key);
@@ -31,7 +32,7 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Adivinar el número secreto'),
+        title: const Center(child: Text('Adivinar el número secreto')),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -101,8 +102,8 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: _check,
-            child: const Text('Ingresar número'),
+            onPressed: _checkNumSecreto,
+            child: const Text('Enviar número'),
           ),
           const SizedBox(height: 20),
           Padding(
@@ -144,12 +145,13 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
                         child: ListView.builder(
                           itemCount: _historialColores.length,
                           itemBuilder: (BuildContext context, int index) {
-                            int guess = _historialColores.keys.elementAt(index);
+                            int historial =
+                                _historialColores.keys.elementAt(index);
                             Color color =
                                 _historialColores.values.elementAt(index);
                             return Center(
                               child: Text(
-                                guess.toString(),
+                                historial.toString(),
                                 style: TextStyle(
                                   color: color,
                                   fontSize: 16,
@@ -198,7 +200,7 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
     _mayorQue.clear();
   }
 
-  void _check() {
+  void _checkNumSecreto() {
     if (_intentosRestantes > 0) {
       setState(() {
         guess = int.tryParse(_textController.text);
@@ -221,32 +223,12 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
             }
           }
         } else {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) => AlertDialog(
-              title: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Error', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-              content: Text(
-                  'Valor inválido. Por favor ingrese un número entre 1 y $_numMax'),
-              actions: [
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'Aceptar',
-                      style: TextStyle(color: Color(0xff335c9f)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
+          Helpers.customDialog(
+              context: context,
+              description:
+                  'Valor inválido. Por favor ingrese un número entre 1 y $_numMax',
+              color: Colors.red,
+              icon: Icons.error_outline);
         }
         _textController.clear();
       });
