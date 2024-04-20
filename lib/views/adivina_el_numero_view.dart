@@ -1,6 +1,7 @@
-import 'dart:math';
-import 'package:adivina_el_numero/views/helpers.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:adivina_el_numero/views/helpers.dart';
+import 'package:adivina_el_numero/views/providers/adivina_el_numero_provider.dart';
 import 'package:adivina_el_numero/views/widgets/custom_listview.dart';
 
 class AdivinaElNumeroView extends StatefulWidget {
@@ -11,25 +12,29 @@ class AdivinaElNumeroView extends StatefulWidget {
 }
 
 class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
-  int _nivelSeleccion = 0;
-  int _numSecreto = 0;
-  int _numMax = 0;
-  int _intentosMax = 0;
-  int _intentosRestantes = 0;
-  int? guess;
-  final List<int> _menorQue = [];
-  final List<int> _mayorQue = [];
   final TextEditingController _textController = TextEditingController();
-  final Map<int, Color> _historialColores = {};
 
   @override
   void initState() {
-    _iniciaJuego();
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    final adivinaProvider = context.watch<AdivinaElNumeroProvider>();
+    void check() {
+      adivinaProvider.checkNumSecreto(_textController.text);
+      if (adivinaProvider.errorCastValue) {
+        Helpers.customDialog(
+            context: context,
+            description:
+                'Valor inválido. Por favor ingrese un número entre 1 y ${adivinaProvider.numMax}',
+            color: Colors.red,
+            icon: Icons.error_outline);
+      }
+        _textController.clear();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Center(child: Text('Adivinar el número secreto')),
@@ -47,7 +52,7 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
               ),
               const SizedBox(width: 5),
               DropdownButton<int>(
-                value: _nivelSeleccion,
+                value: adivinaProvider.nivelSeleccion,
                 items: const [
                   DropdownMenuItem(
                     value: 0,
@@ -66,12 +71,9 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
                     child: Text('Extremo'),
                   ),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    _nivelSeleccion = value!;
-                    _iniciaJuego();
-                  });
-                },
+                onChanged: (value) => context
+                    .read<AdivinaElNumeroProvider>()
+                    .setNivelSeleccion(value!),
               ),
             ],
           ),
@@ -94,7 +96,7 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Intentos: $_intentosRestantes',
+                'Intentos: ${adivinaProvider.intentosRestantes}',
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
@@ -102,7 +104,7 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: _checkNumSecreto,
+            onPressed: check,
             child: const Text('Enviar número'),
           ),
           const SizedBox(height: 20),
@@ -113,13 +115,13 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
               children: [
                 CustomListView(
                   title: "Menor que:",
-                  itemCount: _menorQue.length,
-                  items: _menorQue,
+                  itemCount: adivinaProvider.menorQue.length,
+                  items: adivinaProvider.menorQue,
                 ),
                 CustomListView(
                   title: "Mayor que:",
-                  itemCount: _mayorQue.length,
-                  items: _mayorQue,
+                  itemCount: adivinaProvider.mayorQue.length,
+                  items: adivinaProvider.mayorQue,
                 ),
                 Container(
                   width: 100,
@@ -143,17 +145,14 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
                       const SizedBox(height: 5),
                       Expanded(
                         child: ListView.builder(
-                          itemCount: _historialColores.length,
+                          itemCount: adivinaProvider.historialColor.length,
                           itemBuilder: (BuildContext context, int index) {
-                            int historial =
-                                _historialColores.keys.elementAt(index);
-                            Color color =
-                                _historialColores.values.elementAt(index);
+                            final historial = adivinaProvider.historialColor;
                             return Center(
                               child: Text(
-                                historial.toString(),
+                                historial[index].result.toString(),
                                 style: TextStyle(
-                                  color: color,
+                                  color: historial[index].color,
                                   fontSize: 16,
                                 ),
                               ),
@@ -171,69 +170,5 @@ class _AdivinaElNumeroViewState extends State<AdivinaElNumeroView> {
         ],
       ),
     );
-  }
-
-  void _iniciaJuego() {
-    switch (_nivelSeleccion) {
-      case 0:
-        _numMax = 10;
-        _intentosMax = 5;
-        break;
-      case 1:
-        _numMax = 20;
-        _intentosMax = 8;
-        break;
-      case 2:
-        _numMax = 100;
-        _intentosMax = 15;
-        break;
-      case 3:
-        _numMax = 1000;
-        _intentosMax = 25;
-        break;
-    }
-    if (_numSecreto == 0) {
-      _numSecreto = Random().nextInt(_numMax) + 1;
-    }
-    _intentosRestantes = _intentosMax;
-    _menorQue.clear();
-    _mayorQue.clear();
-  }
-
-  void _checkNumSecreto() {
-    if (_intentosRestantes > 0) {
-      setState(() {
-        guess = int.tryParse(_textController.text);
-        if (guess != null && guess! >= 1 && guess! <= _numMax) {
-          if (guess == _numSecreto) {
-            _historialColores[guess!] = Colors.green;
-            _numSecreto = 0;
-            _iniciaJuego();
-          } else {
-            _intentosRestantes--;
-            if (guess! > _numSecreto) {
-              _menorQue.add(guess!);
-            } else {
-              _mayorQue.add(guess!);
-            }
-            if (_intentosRestantes == 0) {
-              _historialColores[guess!] = Colors.red;
-              _numSecreto = 0;
-              _iniciaJuego();
-            }
-          }
-        } else {
-          Helpers.customDialog(
-              context: context,
-              description:
-                  'Valor inválido. Por favor ingrese un número entre 1 y $_numMax',
-              color: Colors.red,
-              icon: Icons.error_outline);
-        }
-        _textController.clear();
-      });
-    } else {
-      _iniciaJuego();
-    }
   }
 }
